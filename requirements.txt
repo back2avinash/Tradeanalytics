@@ -1,0 +1,11 @@
+# GCP Authentication and Identity
+google-auth
+
+# Messaging and Ingestion
+google-cloud-pubsub
+
+# Data Processing (GCP support for Dataflow)
+apache-beam[gcp]
+
+# Standard Utilities (Built-in, but listed for environment clarity)
+datetime
