@@ -9,13 +9,10 @@ PROJECT_ID = os.environ.get("GCP_PROJECT", "trade-analytics-481714")
 
 with DAG(
         "trade_pipeline_orchestration",
-        # Fix 1: Use a static start date in the past to ensure it's ready to run
+        # Use a static start date in the past to ensure it's ready to run
         start_date=datetime(2023, 12, 19),
-
-        # Fix 2: Change schedule to '@once' to trigger immediately upon upload
-        # (Or use '@daily', etc. if you want recurrence)
+        # Change schedule to '@once' to trigger immediately upon upload
         schedule='@once',
-
         catchup=False
 ) as dag:
 
@@ -38,8 +35,8 @@ with DAG(
         py_requirements=["apache-beam[gcp]"],
         py_system_site_packages=False,
 
-        # Fix 3: CRITICAL for Streaming Jobs
-        # You MUST set this to False. Otherwise, Airflow waits for the
-        # streaming job to finish (which it never does), blocking your DAG forever.
+        # CRITICAL for Streaming Jobs
+        # this MUST be set this to False. Otherwise, Airflow waits for the
+        # streaming job to finish (which it never does), blocking DAG forever.
         dataflow_config={"wait_until_finished": False},
     )

@@ -43,13 +43,11 @@ def run():
         raise ValueError("Project ID is missing.")
 
     INPUT_TOPIC = f"projects/{project_id}/topics/trade-events"
-    OUTPUT_BUCKET = f"gs://trade-outputs-{project_id}"
+    VALID_TRADE_BUCKET = f"gs://trade-analytics-481714-land-valid_trades"
+    REJECTED_TRADE_BUCKET = f"gs://trade-analytics-481714-land-rejected_trades"
 
     pipeline_options.view_as(beam.options.pipeline_options.SetupOptions).save_main_session = True
     pipeline_options.view_as(beam.options.pipeline_options.StandardOptions).streaming = True
-
-    # REMOVED: ts_with_ms = datetime.now().strftime(...)
-    # (Reason: This created a static timestamp for the whole job lifetime)
 
     with beam.Pipeline(options=pipeline_options) as p:
         events = p | "ReadFromPubSub" >> beam.io.ReadFromPubSub(topic=INPUT_TOPIC)
@@ -60,7 +58,7 @@ def run():
         (validated.valid
          | "WindowValid" >> beam.WindowInto(FixedWindows(60))
          | "WriteValid" >> fileio.WriteToFiles(
-                    path=f"{OUTPUT_BUCKET}/valid/",
+                    path=f"{VALID_TRADE_BUCKET}/valid/",
                     sink=fileio.TextSink(),
                     file_naming=trade_filename_naming
                 ))
@@ -69,7 +67,7 @@ def run():
         (validated.rejected
          | "WindowRejected" >> beam.WindowInto(FixedWindows(60))
          | "WriteRejected" >> fileio.WriteToFiles(
-                    path=f"{OUTPUT_BUCKET}/rejected/",
+                    path=f"{REJECTED_TRADE_BUCKET}/rejected/",
                     sink=fileio.TextSink(),
                     file_naming=trade_filename_naming
                 ))
