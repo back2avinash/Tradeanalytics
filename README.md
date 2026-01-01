@@ -126,7 +126,7 @@ This allows us to handle "Late Arriving Data" correctly without corrupting repor
 ## 4. Component Technical Specifications
 
 ### A. Ingestion Layer
-* **Source:** Python-based Trade Simulator (simulating an Order Management System).
+* **Source:** Python-based Trade Simulator (simulating real market data for S&P 500 ETF from Yahoo Finance...).
 * **Transport:** Cloud Pub/Sub (`trade-events` topic).
 * **Payload:** JSON (UTF-8).
 * **Key Fields:** `trade_id` (UUID), `version` (Int), `maturity_date` (ISO-8601).
