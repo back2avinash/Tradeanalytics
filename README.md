@@ -97,3 +97,75 @@ graph LR
 * **Data Validation & Error Handling:** Automatically filters invalid trades, routing them to separate storage for audit purposes.
 * **Event Simulation:** Includes a robust generator for valid trades, expired trades, and version updates to test pipeline logic.
 * **Infrastructure as Code:** Entire pipeline logic and orchestration defined in Python.
+
+```mermaid
+graph LR
+    %% --- STYLES ---
+    classDef gcp fill:#e8f0fe,stroke:#4285f4,stroke-width:2px;
+    classDef py fill:#ffe8d6,stroke:#ff9900,stroke-width:2px;
+    classDef storage fill:#e6f4ea,stroke:#34a853,stroke-width:2px;
+    classDef logic fill:#fce8e6,stroke:#ea4335,stroke-width:2px;
+    classDef view fill:#fff8e1,stroke:#fbc02d,stroke-width:2px,stroke-dasharray: 5 5;
+
+    %% --- 1. INGESTION LAYER ---
+    subgraph Ingestion ["Ingestion Layer"]
+        style Ingestion fill:#fff,stroke:#333,stroke-dasharray: 5 5
+        Sim[("Python Simulator")]:::py
+        PubSub[("Pub/Sub Topic")]:::gcp
+    end
+
+    %% --- 2. PROCESSING LAYER (DATAFLOW) ---
+    subgraph Processing ["Stream Processing (Dataflow)"]
+        style Processing fill:#fff,stroke:#333,stroke-dasharray: 5 5
+        
+        Read(Read):::logic
+        Dedup(Dedup 10m):::logic
+        
+        subgraph StatefulProcessor ["Stateful Processor"]
+            style StatefulProcessor fill:#fff0f5,stroke:#d63384
+            CheckMaturity{Maturity?}:::logic
+            CheckVersion{Version?}:::logic
+        end
+        
+        Split{Routing}:::logic
+    end
+
+    %% --- 3. STORAGE LAYER (BIGQUERY) ---
+    subgraph Storage ["Storage (BigQuery)"]
+        style Storage fill:#fff,stroke:#333,stroke-dasharray: 5 5
+        
+        RejectTable[("rejected_trades<br/>(Table)")]:::storage
+        HistTable[("trade_history<br/>(Table)")]:::storage
+        
+        %% The View Logic
+        CurrentView[("valid_trades_current<br/>(Logical View)")]:::view
+    end
+
+    %% --- 4. ERROR HANDLING ---
+    subgraph GCS ["Error Handling"]
+        style GCS fill:#fff,stroke:#333,stroke-dasharray: 5 5
+        DLQ_Files["GCS DLQ"]:::storage
+    end
+
+    %% --- CONNECTIONS ---
+    Sim --> PubSub
+    PubSub --> Read
+    Read --> Dedup
+    Dedup --> CheckMaturity
+
+    %% Logic Flow
+    CheckMaturity -->|Valid| CheckVersion
+    CheckMaturity -->|Invalid| Split
+    CheckVersion -->|Valid| Split
+    CheckVersion -->|Stale| Split
+
+    %% Routing
+    Split -->|Reject| RejectTable
+    Split -->|Accept| HistTable
+    
+    %% Error Off-loading
+    Split -.->|Errors| DLQ_Files
+```
+    
+    %% View Logic (Dependency)
+    HistTable -.->|Calculates State| CurrentView
